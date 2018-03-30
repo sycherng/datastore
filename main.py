@@ -1,22 +1,33 @@
 import sys
+import entry, datastore_utils
 
+DATASTORE_HEADING = 'STB|TITLE|DATE|PROVIDER|REV|VIEW_TIME' #sic
+DATASTORE_NAME = 'datastore.txt'
+DATASTORE_WIDTH = 217
 
 def main():
+    initializeDatastore()
     print("Program started.")
     while True:
         message = sys.stdin.readline()[:-1] #strip /n 
         if message == "quit":
             sys.exit()
+        if message.startswith("./import "):
+            importFile(message[8:])
         if message.startswith("./query "):
             parser(message[8:])
         else:
             print("Invalid command.")
 
-def parser(message):
-    index = 0
-    for  
+def initializeDatestore():
+    """(None) -> None | if datastore.txt does not exist, create it and write 0\n to first line"""
+    with open(DATASTORE_NAME, 'r+') as ds:
+        line1 = ds.readline()
+        if line1 == '':
+            ds.write("0\n")
 
-
+def parser(query):
+    pass
 
 if __name__ == '__main__':
     main()

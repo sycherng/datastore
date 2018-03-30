@@ -1,1 +1,3 @@
 *.swp
+archive/*
+__pycache__/*
