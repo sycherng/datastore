@@ -3,10 +3,10 @@ import entry, datastore_utils
 
 DATASTORE_HEADING = 'STB|TITLE|DATE|PROVIDER|REV|VIEW_TIME' #sic
 DATASTORE_NAME = 'datastore.txt'
-DATASTORE_WIDTH = 217
+TEMPFILE_NAME = 'tempstore.txt'
 
 def main():
-    initializeDatastore()
+#    initializeDatastore()
     print("Program started.")
     while True:
         message = sys.stdin.readline()[:-1] #strip /n 
@@ -19,12 +19,13 @@ def main():
         else:
             print("Invalid command.")
 
-def initializeDatestore():
-    """(None) -> None | if datastore.txt does not exist, create it and write 0\n to first line"""
-    with open(DATASTORE_NAME, 'r+') as ds:
-        line1 = ds.readline()
-        if line1 == '':
-            ds.write("0\n")
+
+#def initializeDatestore():
+#    """(None) -> None | if datastore.txt does not exist, create it and write 0\n to first line"""
+#    with open(DATASTORE_NAME, 'r+') as ds:
+#        line1 = ds.readline()
+#        if line1 == '':
+#            ds.write("0\n")
 
 def parser(query):
     pass

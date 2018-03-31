@@ -2,7 +2,7 @@ class Entry:
     def __init__(self, fields_dict):
         self.stb = fields_dict["STB"] #pkey
         self.title = fields_dict["TITLE"] #pkey
-        self.provider = fields_dict["PROVIDER"]
+        selt.provider = fields_dict["PROVIDER"]
         self.date = fields_dict["DATE"] #pkey
         self.rev = fields_dict["REV"]
         self.view_time = fields_dict["VIEW_TIME"]
@@ -50,15 +50,15 @@ class Entry:
 
     @staticmethod
     def sortEntries(list_of_entries):
-        """(list) -> None | Tim sorts a list of Entry objects."""
+        """(list) -> None | Tim sorts a list of Entry objects by primary keys .stb, .title, .date"""
         list_of_entries.sort()
 
     def toStorageString(self):
         """(Entry) -> str | Returns the string this Entry will be stored as in datastore"""
         return "{}|{}|{}|{}|{}|{}\n".format(
-            self.stb.ljust(64),
-            self.title.ljust(64),
+            self.stb,
+            self.title,
             self.date,
-            self.provider.ljust(64),
-            self.rev.ljust(5),
-            self.view_time.zfill(5)
+            self.provider,
+            self.rev,
+            self.view_time)
