@@ -12,9 +12,9 @@ def main():
         message = sys.stdin.readline()[:-1] #strip /n 
         if message == "quit":
             sys.exit()
-        if message.startswith("./import "):
-            importFile(message[8:])
-        if message.startswith("./query "):
+        elif message.startswith("./import "):
+            datastore_utils.Importer().importFile(message[9:])
+        elif message.startswith("./query "):
             parser(message[8:])
         else:
             print("Invalid command.")

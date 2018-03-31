@@ -2,7 +2,7 @@ class Entry:
     def __init__(self, fields_dict):
         self.stb = fields_dict["STB"] #pkey
         self.title = fields_dict["TITLE"] #pkey
-        selt.provider = fields_dict["PROVIDER"]
+        self.provider = fields_dict["PROVIDER"]
         self.date = fields_dict["DATE"] #pkey
         self.rev = fields_dict["REV"]
         self.view_time = fields_dict["VIEW_TIME"]
