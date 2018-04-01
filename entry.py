@@ -48,6 +48,14 @@ class Entry:
     def __ne__(self, other):
         return Entry._compare(self, other) != 0
 
+    @classmethod
+    def lineToEntry(cls, line, fields=main.DATASTORE_HEADING, delimiter="|"):
+        """(str, str, str) -> Entry | instantiate an Entry object given a line in a file, fields, and delimiter"""
+        if not line or line.isspace(): return None
+        line = line[:-1] #remove /n
+        line_dict = dict(zip(fields.split(delimiter), (value for value in line.split(delimiter))))
+        return cls(line_dict)
+
     @staticmethod
     def sortEntries(list_of_entries):
         """(list) -> None | Tim sorts a list of Entry objects by primary keys .stb, .title, .date"""

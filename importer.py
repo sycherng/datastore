@@ -3,14 +3,6 @@ import main, entry
 
 class Importer:
 
-    @staticmethod
-    def lineToEntry(line, fields=main.DATASTORE_HEADING, delimiter="|"):
-        """(str, str, str) -> Entry | instantiate an Entry object given a line in a file, fields, and delimiter"""
-        if not line or line.isspace(): return None
-        line = line[:-1] #remove /n
-        line_dict = dict(zip(fields.split(delimiter), (value for value in line.split(delimiter))))
-        return entry.Entry(line_dict)
-
     def importFile(self, file_name):
         self.file_name = file_name
         new_entries = Importer.getEntriesFromFile(file_name)
@@ -25,7 +17,7 @@ class Importer:
             heading = f.readline()[:-1] #remove /n
             line = f.readline()
             while line:
-                entry = cls.lineToEntry(line, heading)
+                entry = Entry.lineToEntry(line, heading)
                 key = f"{entry.stb}|{entry.title}|{entry.date}"
                 new_entries[key] = entry
                 line = f.readline()
@@ -51,14 +43,14 @@ class Importer:
 
                 # Current stored entry being examined
                 self.stored_line = ds.readline() #storeable formatted string
-                self.stored_entry = Importer.lineToEntry(self.stored_line) #Entry object
+                self.stored_entry = Entry.lineToEntry(self.stored_line) #Entry object
 
                 def _getNextStoredRecord():
                     self.stored_line = ds.readline()
                     if not self.stored_line or self.stored_line.isspace():
                         self.stored_entry = None
                     else:
-                        self.stored_entry = Importer.lineToEntry(self.stored_line)
+                        self.stored_entry = Entry.lineToEntry(self.stored_line)
 
                 def _getNextNewEntry():
                     self.new_entries_index += 1
