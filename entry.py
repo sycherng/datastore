@@ -70,3 +70,25 @@ class Entry:
             self.provider,
             self.rev,
             self.view_time)
+
+    def getAttribute(self, attribute):
+        if attribute = "STB":
+            return self.stb
+        elif attribute = "TITLE":
+            return self.title
+        elif attribute = "PROVIDER":
+            return self.provider
+        elif attribute = "DATE":
+            return self.date
+        elif attribute = "REV":
+            return self.rev
+        elif attribute = "VIEW_TIME":
+            return self.view_time
+        else:
+            raise ValueError(f"Entry class has no .{attribute} attribute.")
+
+    def getAttributesString(self, attributes_list):
+        attributes_string = ''
+        for attribute in attributes_list:
+            attributes_string.append(self.getAttribute(attribute)
+        return attributes_string
