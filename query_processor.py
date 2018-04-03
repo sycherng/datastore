@@ -1,5 +1,6 @@
 import main
 
+#call QueryProcessor(query).process()
 class QueryProcessor:
     def __init__(self, query):
         self.query = query
@@ -158,110 +159,52 @@ class QueryProcessor:
         if key in dictionary:
             raise SyntaxError(f"{key} can only be specified once in {flag}.")
 
-    def processQuery(self):
+    def process(self):
         #actually process the query
-            #simple filter or complex filter to get data from datastore
-            #group the data
-            #select and aggregate the data
-            #order the data
+        #simple filter or complex filter to get data from datastore
+        self.filtered_entries = self.getFilteredEntries()
+        #group the data #TODO last point
+        #select and aggregate the data
+        #order the data
 
+    def getFilteredEntries(self):
+        if self.filter_is_advanced:
+            return self.getAdvancedFilteredEntries()
+        else:
+            return self.getSimpleFilteredEntries()
+
+    def getSimpleFilteredEntries(self):
+        """None or Tuple(String key, String specification)
+        (REV, 4.00)
+        """
+        if self.filter != ():
+            check = self.simpleFilteredCheck()
+
+        with open(main.DATASTORE_NAME) as datastore:
+            line = datastore.readline()
+            while line:
+                entry = Entry.lineToEntry(line)
+                if self.survivesSimpleFilter():
+                    filtered_entries.append(entry)
+        return filtered_entries
+
+    def survivesSimpleFilter(self);
+        if self.filter == (): #no filters, automatically passes
+            return True
+        key, value = self.filter
+        if entry.getAttribute(key) == value:
+            return True
+        return False
+
+    def getAdvancedFilteredEntries(self):
+        #TODO implement this using expression tree parsing -> getting valid entries from datastore.
+        #Reminder: -s items must be in -g or -s:agg
+        raise NotImplementedError("Advanced filtering not available.")
 
 
 ############################################old code###############
-        self.flag_specs = self._getFlagsSpecs()
-        if self.query = "": return #nothing to print, query is blank
-        if "s" not in self.flags_specs: return #nothing to print, nothing is SELECTed        
-        self.select_by = self._getSelectBy()
-        self.aggregate_keys = self.getAggregateKeys()
-
-        self.group_by = self._getGroupBy()
-        self.order_by = self.getOrderBy()
-
-    def _getOrderBy(self):
-        order_by_tokens = self._getFlagSpecificTokens("o") #make self.order_by
-        self._raiseErrorIfDuplicates(self.order_by, 'o') #no duplicates allowed in self.order_by
-        self._validateOrderKeys()
-
-    def _getGroupBy(self):
-        group_by_tokens = self.getFlagSpecificTokens("g")
-        self.raiseErrorIfDuplicates(group_by_tokens, "g")
-        self.raiseErrorIfAggregatedOver(group_by_tokens, "g")
-        return group_by_tokens
-        
-    def _getSelectBy(self):
-        selected_tokens = self._getFlagSpecificTokens("s")
-        selected = QueryProcessor._pairStringsToTuple(selected_tokens)
-        return selected
-
     def _getAggregateKeys(self):
         return [select_by_tuple[0] for select_by_tuple in self.select_by if select_by_tuple[1] != None]
-
-    def _raiseErrorIfAggregatedOver(keys_list, error, flag):
-        #-g keys cannot be -s:aggregated over
-        if [key for key in keys_list if key in self.aggregate_keys]:
-        #alternatively if set(keys_list).intersection(set(self.aggregate_keys)):
-            raise ValueError(f"-{flag} keys cannot be aggregated over.")
-
-    def _validateOrderKeys(self):
-        self.order_by #list of keys
-        for order_key in self.order_by:
-            if order_key not in self.group_by or order_key not in list(filter(lambda x: x[1] != None, self.select_by 
-        if self._orderKeyNotInGroup() or self._orderKeyNotInAggregate()
-            raise ValueError("-o keys must be in -g or -s:agg.")
-#TODO^
-    def _orderKeyNotInGroup(self):
-    def _orderKeyNotInAggregate(self):
-
-    def _getFlagsSpecs(self):
-        flags_split_query = self.query.split("-") #split at flags
-        '''
-        f KEY=value,KEY=valueSPACE
-        g KEY,KEYSPACE
-        s KEY:agg,KEYSPACE
-        o KEY, KEY
-        '''
-        length = len(flags_split_query)
-        flags_specs = {}
-        for index in range(length):
-            flag_segment = flags_split_query[index]
-            if not index == length - 1: #last flag
-                flag_segment = flags_split_query[:-1] #remove trailing space
-            key = flag_segment[0] #flag letter
-            if key not in main.VALID_FLAGS:
-                raise ValueError(f"-{key} is an invalid flag.")
-            value = flag_segment[2:] #remove flag letter and trailing space
-            if key in self.flags_specs:
-                raise ValueError(f"Duplicate flag -{key}."))
-            flags_specs[key] = value
-        return flags_specs   
-
-    def _raiseErrorIfDuplicates(self, provided_list, flag):
-        copy_list = provided_list.copy()
-        copy_list.sort()
-        last_item = None
-        for item in copy_list:
-            if item == last_item:
-                raise ValueError("No duplicates allowed in -{flag}.")
-            last_item = item
-
-    def process(self):
-        self._filter()
-        if self.filtered_entries == []: return #nothing to print, no valid entries after filtering
-
-        self._group()
-
-        self._select()
-
-    def _getFlagSpecificTokens(self, flag):
-        if flag not in self.flags_specs: return []
-        return self.flags_specs[flag].split(",") 
-
-    def _filter(self):
-        simple_filter = self._checkIfSimpleFilter()
-        if simple_filter:
-            self.filtered_entries = self._getSimpleFilteredEntries()
-        else:
-            self.filtered_entries = self._getComplexFilteredEntries()        
 
     def _group(self):
         self.grouped_entries = {}
@@ -275,59 +218,4 @@ class QueryProcessor:
     def _select(self):
         self.select_keys #list of tuples, sequence must be preserved
         self.grouped_entries #list of dict  
-        #TODO       
- 
-    @staticmethod
-    def _pairStringsToTuples(provided_list, delimiter="="): #delimiter=":" for -s flag
-        '''(list of str, str) -> list of tuple | Takes a list of strings representing key value pairs and returns a list of tuples generated from those pairs.'''
-        pairs = []
-        for pair_string in provided_list:
-            pairs.append(QueryProcessor._pairStringToTuple(pair_string, delimiter)
-        return pairs
-
-    @staticmethod
-    def _pairStringToTuple(pair_string, delimiter):
-        '''(str, str) -> tuple | Takes a string representing a key value pair and returns a tuple generated from that pair. If there is only a key, return a tuple of (key, None).'''
-        try:
-            pair_string.split(delimiter)
-        except:
-            key = pair_string
-            value = None
-        else:
-            key = split_pair[0]
-            value = split_pair[1]
-        if key not in main.VALID_KEYS:
-            raise ValueError(f'Invalid key \"{key}\".')
-        return (key, value)
-                 
-    def _checkIfSimpleFilter(self):
-        for token in ['(', ')', 'AND', 'OR']:
-            if token in self.flags_specs['f']:
-                return False
-        return True
-
-    def _getSimpleFilteredEntries(self):
-        filter_tokens = self._getFlagSpecificTokens("f")
-        filters = QueryProcessor._pairStringsToTuples(filter_tokens)
-        filtered_entries = []
-        self._raiseErrorIfDuplicates(filtered_entries)
-        with open(main.DATASTORE_NAME) as ds:
-            line = ds.readline()
-            while line:
-                entry = Entry.lineToEntry(line)
-                if self._satisfiesSimpleFilter(entry, filters):
-                    filtered_entries.append(entry)
-        return filtered_entries
-
-    def _getComplexFilteredEntries(self):
-        #-s items must be in -g or -s:agg
-        raise NotImplementedError("Advanced filtering not available.")
-
-    def _satisfiesSimpleFilter(self, entry, filters):
-        for filter_tuple in filters: #list of tuple
-            filter_key, filter_value = filter_tuple
-            if entry.getAttribute(filter_key) == filter_value:
-                return True #ok as long as satisfies any of the simple filter tuples ex. ("REV", 4.00)
-        return False
-
-
+        #TODO
