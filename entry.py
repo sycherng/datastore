@@ -102,5 +102,5 @@ class Entry:
     def getAttributesString(self, attributes_list):
         attributes_string = ''
         for attribute in attributes_list: #loops over a max of len(values.VALID_HEADINGS), in this case 6 items
-            attributes_string.append(self.getAttribute(attribute))
+            attributes_string += self.getAttribute(attribute)
         return attributes_string

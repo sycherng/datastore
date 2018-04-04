@@ -1,5 +1,6 @@
 import values
 import entry
+import sortable_row
 
 #call QueryProcessor(query).process()
 class QueryProcessor:
@@ -27,7 +28,7 @@ class QueryProcessor:
         #raise errors if fail logical checks like
             #-s items must be in -g or -s:agg
             #-o items must be in -g or -o:agg
-        self.raiseErrorIfInvalidSelects()#last ded
+        self.raiseErrorIfInvalidSelects()
         self.raiseErrorIfInvalidOrders()
 
     def raiseErrorIfInvalidSelects(self):
@@ -46,6 +47,8 @@ class QueryProcessor:
                     raise SyntaxError("-s items must be in -g or -s:aggregated.")
 
     def raiseErrorIfInvalidOrders(self):
+        if not self.orders:
+            return
         for order in self.orders:
             key, aggregate_option = order
             if self.groups == None:
@@ -203,6 +206,7 @@ class QueryProcessor:
         self.ordered_entries = self.orderRows() #list of dict
         #select keys
         self.selected_rows = self.getSelectedRows() #list of string
+        print('209 selected_rows', self.selected_rows)
         #print headers and rows
         self.printRows()
 
@@ -212,25 +216,29 @@ class QueryProcessor:
 
     def getSelectedRows(self):
         select_processed_rows = []
-        for row in ordered_entries:
-            for select in self.select: #List of Tuple(key, aggregate):
+        for row in self.ordered_entries:
+            print('line220 row', row)
+            this_row = ''
+            for select in self.selects: #List of Tuple(key, aggregate):
                 key, aggregate_option = select
                 if aggregate_option == '':
                     select_key = key
                 else:
                     select_key = f'{key}:{aggregate_option}'
-                this_row = ''
-                this_row += row[select_key]
+                this_row += str(row[select_key])
                 this_row += ','
+                print('line231 this row', this_row)
             this_row = this_row[:-1] #remove extra ,
             select_processed_rows.append(this_row)
         return select_processed_rows 
 
 
     def orderRows(self):
+        if not self.orders:
+            return self.processed_rows
         sortable_rows = []
         for row in self.processed_rows:
-            sortable_rows.append(SortableRow(row, self.orders))
+            sortable_rows.append(sortable_row.SortableRow(row, self.orders))
         sortable_rows.sort()
         ordered_rows = list(map(lambda x: x.rows, sortable_rows))
         return ordered_rows
@@ -244,6 +252,7 @@ class QueryProcessor:
 
     def groupsToRows(self):
         rows_list = []
+        print(f'line 250, grouped-entries {self.grouped_entries}')
         for row in self.grouped_entries:
             row_dict = {}
             for select_key in self.selects: #List(Tuple(String key, String aggregate_option)
@@ -252,9 +261,13 @@ class QueryProcessor:
                     row_dict_key = key
                     row_dict_value = row[0].getAttribute(key)
                 else: #aggregate option
+                    print('line263 key', key, 'agg', aggregate_option)
                     row_dict_key = f'{key}:{aggregate_option}'
+                    print('line265 row_dict_key', row_dict_key)
                     row_dict_value = self.getAggregateValue(row, key, aggregate_option)
-                row_dict[key] = row_dict_value
+                row_dict[row_dict_key] = row_dict_value
+            rows_list.append(row_dict)
+        print('line262 rows dict', rows_list)
         return rows_list
 
     def getAggregateValue(self, row, key, aggregate_option):
@@ -303,9 +316,8 @@ class QueryProcessor:
         return len(row)
 
     def getCollectValue(self, row, key):
-        collect_value = [QueryProcessor.stringToNum(row[0].getAttribute(key))]
-
-        for entry in row[1:]:
+        collect_value = []
+        for entry in row:
             collect_value.append(QueryProcessor.stringToNum(entry.getAttribute(key)))
         return collect_value
 
@@ -344,7 +356,7 @@ class QueryProcessor:
             if key in grouped_entries:
                 grouped_entries[key].append(entry)
             else:
-                grouped_entries[key] = entry
+                grouped_entries[key] = [entry]
         return list(grouped_entries.values())
 
     def getFilteredEntries(self):
