@@ -27,13 +27,12 @@ class QueryProcessor:
         #raise errors if fail logical checks like
             #-s items must be in -g or -s:agg
             #-o items must be in -g or -o:agg
-        self.raiseErrorIfInvalidSelects()
+        self.raiseErrorIfInvalidSelects()#last ded
         self.raiseErrorIfInvalidOrders()
 
     def raiseErrorIfInvalidSelects(self):
         print('self.selects, line 33', self.selects)
         for select in self.selects:
-            print('groUPS', self.groups)
             key, aggregate_option = select
             if self.groups == None:
                 if aggregate_option != '':
@@ -104,7 +103,7 @@ class QueryProcessor:
     def parseGroups(self):
         if not '-g' in self.parsed_query_dict:
             return None
-        groups_string = self.tokenized_query_dict['-g']
+        groups_string = self.parsed_query_dict['-g']
         keys = groups_string.split(',')
         for key in keys:
             QueryProcessor.raiseErrorIfInvalidKey(key, '-g')
@@ -229,10 +228,11 @@ class QueryProcessor:
 
 
     def orderRows(self):
-        ordered_rows = []
+        sortable_rows = []
         for row in self.processed_rows:
-            ordered_rows.append(SortableRow(row))
-        ordered_rows.sort()
+            sortable_rows.append(SortableRow(row, self.orders))
+        sortable_rows.sort()
+        ordered_rows = list(map(lambda x: x.rows, sortable_rows))
         return ordered_rows
 
     def entriesToRows(self):
@@ -364,9 +364,10 @@ class QueryProcessor:
                 e = entry.Entry.lineToEntry(line)
                 if self.passedFilter(e):
                     filtered_entries.append(e)
+                line = datastore.readline()
         return filtered_entries
 
-    def passedFilter(self, entry):
+    def passedFilter(self, entry): #TODO single filter -> comma separated filters
         if not self.filter: #no filters, automatically passes
             return True
         key, value = self.filter
