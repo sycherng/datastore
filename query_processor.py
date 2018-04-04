@@ -57,26 +57,24 @@ class QueryProcessor:
         prev_flag = None
         for word in words_list:
             if word in values.VALID_FLAGS:
-                query_dict = self.updateQueryDict(query_dict, prev_flag, value_stringbuilder)
+                self.updateQueryDict(query_dict, prev_flag, value_stringbuilder)
                 value_stringbuilder = ''
                 prev_flag = word
             else:
                 value_stringbuilder += (word + ' ')
-        query_dict = self.updateQueryDict(query_dict, prev_flag, value_stringbuilder)
+        self.updateQueryDict(query_dict, prev_flag, value_stringbuilder)
         return query_dict
 
 
     def updateQueryDict(self, query_dict, key, value_stringbuilder):
         '''(self, dict, str, str) -> dict
-        Inserts into query_dict if there is a valid key and value,
-        returns query_dict.'''
+        Inserts into query_dict if there is a valid key and value.'''
         if value_stringbuilder == '':
             return
-        QueryProcessor.raiseErrorIfInvalidKey(key, 'query')
-        QueryProcessor.raiseErrorIfDuplicate(key, 'query', query_dict)
+        if key in query_dict:
+            raise SyntaxError(f'Duplicate flag {key} in query.')
         query_dict[key] = value_stringbuilder[:-1] #extra space
-        return query_dict
-
+       
 
     def isFilterAdvanced(self):
         '''(self) -> bool
@@ -195,7 +193,7 @@ class QueryProcessor:
 
 
     def raiseErrorIfInvalidOrders(self):
-         '''(self) -> None
+        '''(self) -> None
         Raises errors if select clause does not satisfy the following rule:
         -s keys must be in -g or have an aggregation option (-s key:agg)
         '''
@@ -339,17 +337,28 @@ class QueryProcessor:
         rows_list = []
         for row in self.grouped_entries:
             row_dict = {}
-            for select_key in self.selects: #List(Tuple(String key, String aggregate_option)
-                key, aggregate_option = select_key
-                if aggregate_option == '': #no aggregate
-                    row_dict_key = key
-                    row_dict_value = row[0].getAttribute(key)
-                else: #aggregate option
-                    row_dict_key = f'{key}:{aggregate_option}'
-                    row_dict_value = self.getAggregateValue(row, key, aggregate_option)
-                row_dict[row_dict_key] = row_dict_value
+            for select_key in self.selects:
+                self.getKeysAndAggregates(select_key, row, row_dict)
+            for order_key in self.orders:
+                self.getKeysAndAggregates(order_key, row, row_dict)
             rows_list.append(row_dict)
         return rows_list
+
+
+    def getKeysAndAggregates(self, clause_key, row, row_dict):
+        """(self, str, dict, dict) -> None
+        Adds all keys value pairs requested by SELECT BY or ORDER BY clause to row_dict.
+        If an aggregation option is specified, uses the aggregation result as value.
+        If no aggregation option is specified, uses the first entry's attribute result as value"""
+        key, aggregate_option = clause_key
+        if aggregate_option == '': #no aggregate
+            row_dict_key = key
+            row_dict_value = row[0].getAttribute(key)
+        else: #aggregate option
+            row_dict_key = f'{key}:{aggregate_option}'
+            row_dict_value = self.getAggregateValue(row, key, aggregate_option)
+        if row_dict_key not in row_dict:
+            row_dict[row_dict_key] = row_dict_value
 
 
     def getAggregateValue(self, row, key, aggregate_option):
@@ -457,7 +466,7 @@ class QueryProcessor:
         for row in self.processed_rows:
             sortable_rows.append(sortable_row.SortableRow(row, self.orders_keys))
         sortable_rows.sort()
-        ordered_rows = list(map(lambda x: x.row, sortable_rows))
+        ordered_rows = list(map(lambda x: x.attributes_dict, sortable_rows))
         return ordered_rows
 
 
