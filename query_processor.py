@@ -9,29 +9,43 @@ class QueryProcessor:
         self.query = query
 
         #parse query to individual clauses
-        self.flags_to_strings = self.parseQuery() #dict<str, str> | dict of <valid flags=>parameters>
+        self.parsed_query = self.parseQuery() #dict<str, str> | dict of <valid flags=>parameters>
 
         #raise error if nothing was selected
-        if not '-s' in self.flags_to_strings:
+        if not '-s' in self.parsed_query:
             raise SyntaxError("Nothing was selected with this query.")
 
         #is the filter request advanced?
         self.filter_is_advanced = self.isFilterAdvanced() #boolean | whether filter has AND, OR, (, )
 
         #parse each clause
+        '''
+        variable     | type                          | details
+        -------------+-------------------------------+----------------------------------------------------
+        self.filter  | tuple(str, str)               | tuple of (FILTER BY key, value specification)
+                     | None                          | None if no -f clause or filter is advanced (includes AND, OR, (, ))
+        self.groups  | list<str>                     | list of <GROUP BY keys>
+                     | None                          | None if no -g clause 
+        self.selects | list<tuple(str, str)>         | list of tuples of (SELECT key, aggregation option)
+        self.orders  | list<tuple(str, str)>         | list of tuples of (ORDER BY key, aggregation option)
+                     | None                          | None if no -o clause
+        '''
         if self.filter_is_advanced == False:
-            self.filter = self.parseSimpleFilter() #None or tuple(str, str) | tuple of (FILTER BY key, value specification)
-        self.groups = self.parseGroups() #None or list<str> | list of <GROUP BY keys>
-        self.selects = self.parseSelects() #list<tuple(str, str)> | list of tuples of (SELECT key, aggregation option)
-        self.orders = self.parseOrders() #None or list<tuple(str, str)> | list of tuples of (ORDER BY key, aggregate_option)
+            self.filter = self.parseSimpleFilter()
+        self.groups = self.parseGroups()
+        self.selects = self.parseSelects()
+        self.orders = self.parseOrders()
 
         #raise errors if clauses fail logical checks like
-            #-s keys must be in -g or have an aggregated option specified (-s key:agg)
-            #-o keys must be in -g or have an aggregation option specified (-o key:agg)
         self.raiseErrorIfInvalidSelects()
         self.raiseErrorIfInvalidOrders()
 
+
     def parseQuery(self):
+        '''(self) -> dict<str, str>
+        Parses self.query,
+        returns a dict of valid flag=>parameters
+        '''
         if self.query.isspace():
             raise SyntaxError("No query given.")
 
@@ -43,36 +57,51 @@ class QueryProcessor:
         prev_flag = None
         for word in words_list:
             if word in values.VALID_FLAGS:
-                self.updateQueryDict(query_dict, prev_flag, value_stringbuilder)
+                query_dict = self.updateQueryDict(query_dict, prev_flag, value_stringbuilder)
                 value_stringbuilder = ''
                 prev_flag = word
             else:
                 value_stringbuilder += (word + ' ')
-        self.updateQueryDict(query_dict, prev_flag, value_stringbuilder)
+        query_dict = self.updateQueryDict(query_dict, prev_flag, value_stringbuilder)
         return query_dict
+
 
     def updateQueryDict(self, query_dict, key, value_stringbuilder):
+        '''(self, dict, str, str) -> dict
+        Inserts into query_dict if there is a valid key and value,
+        returns query_dict.'''
         if value_stringbuilder == '':
             return
+        QueryProcessor.raiseErrorIfInvalidKey(key, 'query')
         QueryProcessor.raiseErrorIfDuplicate(key, 'query', query_dict)
-        query_dict[key] = value_stringbuilder[:-1]
+        query_dict[key] = value_stringbuilder[:-1] #extra space
         return query_dict
 
+
     def isFilterAdvanced(self):
-        if '-f' not in self.flags_to_strings:
+        '''(self) -> bool
+        Returns a boolean representing whether there is an advanced filter
+        requested in this query.'''
+        if '-f' not in self.parsed_query:
             return False
         for token in ['AND', 'OR', '(', ')']:
-            if token in self.flags_to_strings['-f']:
+            if token in self.parsed_query['-f']:
                 return True
         return False
 
+
     def parseSimpleFilter(self):
-        '''
-        Accounts for edge case where a key such as TITLE contains multiple spaces, commas, and equal signs.
-        '''
-        if not '-f' in self.flags_to_strings:
+        '''(self) -> tuple(str,str)
+        Returns a single tuple of filter key to value restriction if 
+        a valid -f clause is present.
+
+        Cases handled:
+            multiple spaces
+            multiple commas
+            multiple equal signs'''
+        if not '-f' in self.parsed_query:
             return None
-        filter_string = self.flags_to_strings["-f"]
+        filter_string = self.parsed_query["-f"]
         eq_split_strings = filter_string.split("=")
         key = eq_split_strings[0]
         QueryProcessor.raiseErrorIfInvalidKey(key, '-f')
@@ -83,9 +112,12 @@ class QueryProcessor:
 
 
     def parseGroups(self):
-        if not '-g' in self.flags_to_strings:
+        '''(self) -> list<str>
+        Returns a list of group by keys if a valid -g clause is present.
+        '''
+        if not '-g' in self.parsed_query:
             return None
-        groups_string = self.flags_to_strings['-g']
+        groups_string = self.parsed_query['-g']
         keys = groups_string.split(',')
         for key in keys:
             QueryProcessor.raiseErrorIfInvalidKey(key, '-g')
@@ -93,10 +125,14 @@ class QueryProcessor:
 
 
     def parseSelects(self):
-        if not '-s' in self.flags_to_strings:
-            raise SyntaxError('Nothing is selected.')
+        '''(self)-> list<tuple(str,str)>
+        Returns a list of tuples of select key, aggregation option if
+        a valid -s clause is present.
+
+        Presence of a -s clause was confirmed on line 15.
+        '''
         selects = []
-        select_string = self.flags_to_strings['-s']
+        select_string = self.parsed_query['-s']
         comma_split_strings = select_string.split(',')
         for string in comma_split_strings:
             pair = string.split(':')
@@ -109,12 +145,20 @@ class QueryProcessor:
             selects.append((key, value))
         return selects
 
+
     def parseOrders(self):
-        if not '-o' in self.flags_to_strings:
+        '''(self)-> list<tuple(str, str)>
+        Returns a list of tuples of order by key, aggregation option if
+        a valid -o clause is present.
+
+        Also saves a list (self.order_keys) of order by key and aggregation pairs
+        as strings of key:pair for later use by self.orderRows().
+        '''
+        if not '-o' in self.parsed_query:
             return None
         self.orders_keys = []
         orders = []
-        order_string = self.flags_to_strings['-o']
+        order_string = self.parsed_query['-o']
         comma_split_strings = order_string.split(',')
         for string in comma_split_strings:
             pair = string.split(':')
@@ -130,7 +174,12 @@ class QueryProcessor:
             orders.append((key, value))
         return orders
 
+
     def raiseErrorIfInvalidSelects(self):
+        '''(self) -> None
+        Raises errors if select clause does not satisfy the following rule:
+        -s keys must be in -g or have an aggregation option (-s key:agg)
+        '''
         for select in self.selects:
             key, aggregate_option = select
             if self.groups == None:
@@ -142,9 +191,14 @@ class QueryProcessor:
                 elif key not in self.groups and aggregate_option != '':
                     continue
                 else:
-                    raise SyntaxError("-s items must be in -g or -s:aggregated.")
+                    raise SyntaxError("-s keys must be in -g or have an aggregation option specified.")
+
 
     def raiseErrorIfInvalidOrders(self):
+         '''(self) -> None
+        Raises errors if select clause does not satisfy the following rule:
+        -s keys must be in -g or have an aggregation option (-s key:agg)
+        '''
         if not self.orders:
             return
         for order in self.orders:
@@ -158,42 +212,66 @@ class QueryProcessor:
                 elif key not in self.groups and aggregate_option != '':
                     continue
                 else:
-                    raise SyntaxError("-s items must be in -g or -o:aggregated.")
+                    raise SyntaxError("-o keys must be in -g or have an aggregation optionspecified.")
+
 
     @staticmethod
-    def raiseErrorIfInvalidKey(key, flag):
+    def raiseErrorIfInvalidKey(key, level):
+        '''(str, str) -> None
+        Raises error if an invalid key as per values.VALID_KEYS.
+        Convenience function.
+        '''
         if key not in values.VALID_KEYS:
-            raise SyntaxError(f"{key} is an invalid key for {flag}.")
+            raise SyntaxError(f"{key} is an invalid key for {level}.")
 
 
     @staticmethod
-    def raiseErrorIfDuplicate(key, flag, dictionary):
+    def raiseErrorIfDuplicate(key, level,  dictionary):
+        '''(str, str, dict) -> None
+        Raises error if key already exists in dictionary.
+        Convenience function.
+        '''
         if key in dictionary:
-            raise SyntaxError(f"{key} can only be specified once in {flag}.")
+            raise SyntaxError(f"{key} can only be specified once in {level}.")
+
 
     @staticmethod
-    def raiseErrorIfInvalidAggregate(key, flag):
+    def raiseErrorIfInvalidAggregate(key, level):
+        '''(str, str) -> None
+        Raises error if an invalid key as per values.VALID_AGGREGATE_OPTIONS.
+        Convenience function.
+        '''
         if key not in values.VALID_AGGREGATE_OPTIONS:
-            raise SyntaxError(f"{key} is an invalid aggregation option for {flag}.")
+            raise SyntaxError(f"{key} is an invalid aggregation option for {level}.")
+
 
     def processQuery(self):
-        #actually process the query
+        '''
+        variable              | type              | details
+        ----------------------+-------------------+------------------------------------------------------------------
+        self.filtered_entries | list<Entry>       | list of <Entry object from datastore satisfying FILTER BY clause>
+        self.grouped_entries  | list<list<Entry>> | outer list = list of groups, inner list = all entries belonging to same group
+        self.processed_rows   | list<dict>        | if groups: list of <rows as dicts, keys include all aggregate values requested by -s and -o clauses>
+                              | list<dict>        | if no groups: list of <rows as dicts, no aggregate values>
+        self.ordered_entries  | list<dict>        | list of <rows as dicts, sorted by ORDER BY keys>
+        self.selected_rows    | list<str>         | list of <rows as str, with SELECT BY values separated by commas>
+        '''
         #simple filter or complex filter to get data from datastore
-        self.filtered_entries = self.getFilteredEntries() #list<Entry> | list of <Entry object from datastore satisfying FILTER BY clause>
+        self.filtered_entries = self.getFilteredEntries()
         #group the data
-        self.grouped_entries = self.getGroupedEntries() #list<list<Entry>> | outer list = list of groups, inner list = all entries belonging to same group
+        self.grouped_entries = self.getGroupedEntries()
 
         #if there are groups, get aggregate values
         if self.groups != None:
-            self.processed_rows = self.groupsToRows() #list<dict> | list of <rows as dicts, keys include all aggregate values requested by -s and -o clauses>
+            self.processed_rows = self.groupsToRows()
         #otherwise simply turn it to a list of rows
         else:
-            self.processed_rows = self.entriesToRows() #list<dict> | list of <rows as dicts, no aggregate values>
+            self.processed_rows = self.entriesToRows()
 
         #order row 
-        self.ordered_entries = self.orderRows() #list<dict> | list of <rows as dicts, sorted by ORDER BY keys>
+        self.ordered_entries = self.orderRows()
         #select keys
-        self.selected_rows = self.getSelectedRows() #list<str> | list of <rows as str, with SELECT BY values separated by commas>
+        self.selected_rows = self.getSelectedRows()
         #print rows
         self.printRows()
 
@@ -203,6 +281,7 @@ class QueryProcessor:
             return self.getAdvancedFilteredEntries()
         else:
             return self.getSimpleFilteredEntries()
+
 
     def getAdvancedFilteredEntries(self):
         #TODO implement this using expression tree parsing -> getting valid entries from datastore.
@@ -224,13 +303,17 @@ class QueryProcessor:
                 line = datastore.readline()
         return filtered_entries
 
-    def passedFilter(self, entry): #TODO single filter -> comma separated filters
+
+    def passedFilter(self, entry): 
+        """(self, Entry) -> bool
+        Returns boolean representing whether Entry satisfies filter."""
         if not self.filter: #no filters, automatically passes
             return True
         key, value = self.filter
         if entry.getAttribute(key) == value:
             return True
         return False
+
 
     def getGroupedEntries(self):
         """(self) -> List<List<Entry>>
@@ -250,6 +333,9 @@ class QueryProcessor:
 
 
     def groupsToRows(self):
+        """(self) -> list<dict>
+        Turns each group in self.grouped_entries into a dict representing one row,
+        includes aggregated keys and values."""       
         rows_list = []
         for row in self.grouped_entries:
             row_dict = {}
@@ -265,8 +351,12 @@ class QueryProcessor:
             rows_list.append(row_dict)
         return rows_list
 
+
     def getAggregateValue(self, row, key, aggregate_option):
-        """(self, List<Entry>, String, String""" 
+        """(self, list<Entry>, str, str) -> int or str or list<str>
+        Returns aggregate value for the specified key:aggregate pair
+        for a row represented by a dict.
+        """
         if aggregate_option == 'min':
             return self.getMinValue(row, key)
         if aggregate_option == 'max':
@@ -278,6 +368,7 @@ class QueryProcessor:
         if aggregate_option == 'collect': 
             return self.getCollectValue(row, key)
 
+
     def getMinValue(self, row, key): 
         min_value = QueryProcessor.stringToNum(row[0].getAttribute(key))
 
@@ -287,6 +378,7 @@ class QueryProcessor:
                 min_value = value
         return min_value
 
+
     def getMaxValue(self, row, key): 
         max_value = QueryProcessor.stringToNum(row[0].getAttribute(key))
 
@@ -295,6 +387,7 @@ class QueryProcessor:
             if value > max_value:
                 max_value = value
         return max_value
+
 
     def getSumValue(self, row, key):
         '''
@@ -307,8 +400,10 @@ class QueryProcessor:
             sum_value += QueryProcessor.stringToNum(entry.getAttribute(key))
         return sum_value
 
+
     def getCountValue(self, row, key):
         return len(row)
+
 
     def getCollectValue(self, row, key):
         collect_value = []
@@ -316,9 +411,10 @@ class QueryProcessor:
             collect_value.append(QueryProcessor.stringToNum(entry.getAttribute(key)))
         return collect_value
 
+
     @staticmethod
     def stringToNum(string): #bad name
-        """
+        """(str) -> str or float or int
         If string:
             can be converted to float, return float.
             can be converted to int, return int.
@@ -340,6 +436,8 @@ class QueryProcessor:
 
 
     def entriesToRows(self):
+        """(self) -> list<dict>
+        Turns each row in self.filtered_entries into a dict representing one row."""       
         rows_list = []
         for entry in self.filtered_entries:
             entry_dict = entry.toDict()
@@ -348,6 +446,11 @@ class QueryProcessor:
 
 
     def orderRows(self):
+        """(self) -> list<dict>
+        Orders self.processed_rows by an arbitrary number of ORDER BY keys with
+        the help of SortableRow class,
+        returns as a list of dict where each dict represents a row.
+        """
         if not self.orders:
             return self.processed_rows
         sortable_rows = []
@@ -359,6 +462,9 @@ class QueryProcessor:
 
 
     def getSelectedRows(self):
+        """(self) -> list<str>
+        Returns a list of rows as strings with SELECT BY values separated by commas.
+        """
         select_processed_rows = []
         for row in self.ordered_entries:
             this_row = ''
@@ -376,5 +482,8 @@ class QueryProcessor:
 
 
     def printRows(self):
+        """(self) -> None
+        Prints each row in self.selected_rows.
+        """
         for row in self.selected_rows:
             print(row)
