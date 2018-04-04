@@ -9,16 +9,11 @@ def start():
         if message == "quit":
             sys.exit()
         elif message.startswith("./import "):
-            importer.Importer().importFile(message[9:])
+            importer.Importer(message[9:]).importFile()
         elif message.startswith("./query "):
-            p = query_processor.QueryProcessor(message[8:])
-            print(p.orders)
-            print(p.selects)
-            print(p.groups)
-            print(p.filter)
-            p.process()
+            query_processor.QueryProcessor(message[8:]).processQuery()
         else:
-            print("Invalid command.")
+            print("Invalid command. Try:\n./import <filename>\n./query <query>")
 
 if __name__ == '__main__':
     start() 
