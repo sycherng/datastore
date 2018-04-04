@@ -1,93 +1,107 @@
 import os
-import values, entry
+import values
+import entry
 
 class Importer:
 
-    def importFile(self, file_name):
+    def __init__(self, file_name):
+        """
+        Initializes Importer object with file name as attribute.
+        """
         self.file_name = file_name
-        new_entries = Importer.getEntriesFromFile(file_name)
-        entry.Entry.sortEntries(new_entries)
-        self.insertEntries(new_entries)
 
-    @classmethod
-    def getEntriesFromFile(cls, file_name):
-        """(str) -> list of Entry | instantiate an Entry object for each line in this file, overwrite each subsequent Entry with the same logical record, return in a list."""
+
+    def importFile(self, file_name):
+        """(self, str) -> None
+        Obtains entries from file to be imported, overwriting with newer entry if same logical record,
+        sorts the list of entries by primary keys,
+        inserts entry to datastore, overwriting with newer entry if same logical record.
+        """
+        self.new_entries = self.getEntriesFromFile()
+        entry.Entry.sortEntries(self.new_entries) #sorts by primary keys
+        self.insertEntries()
+
+
+    def getEntriesFromFile(self):
+        """(str) -> list<Entry>
+        Instantiates an Entry object for each line in the provided file, 
+        overwrites each subsequent Entry with the same logical record (primary keys),
+        returns in a list of Entry objects."""
         new_entries = {}
-        with open(file_name, 'r') as f:
+        with open(self.file_name, 'r') as f:
             heading = f.readline()[:-1] #remove /n
             line = f.readline()
             while line:
                 entry = Entry.lineToEntry(line, heading)
-                key = f"{entry.stb}|{entry.title}|{entry.date}"
+                key = f"{entry.stb}|{entry.title}|{entry.date}" #primary keys
                 new_entries[key] = entry
                 line = f.readline()
         return list(new_entries.values())
 
-    def insertEntries(self, new_entries):
-        """(list of Entry) -> None | binary search insert into datastore, overriding duplicates by primary keys"""
+
+    def insertEntries(self):
+        """(self, list<Entry>) -> None
+        Converts each Entry to a storable string format,
+        both the list of new entries and all stored entries are already sorted by primary keys,
+        therefore uses modified merge join algorithm to insert into datastore,
+        overriding duplicates with the same logical record (primary keys)."""
 
         #if tempfile exists, a previous import may have aborted midway, raise an error
         if os.path.isfile(values.TEMPFILE_NAME):
             raise RuntimeError(f"Previous file import may have failed. Check {values.DATASTORE_NAME}, delete {values.TEMPFILE_NAME}, and reattempt import as needed.")
 
-
         #otherwise proceed with import
-        with open(values.DATASTORE_NAME, 'w+') as ds:
+        with open(values.DATASTORE_NAME, 'w+') as ds: #only need 'r' privileges to read, but 'w+' allows creation of a new datastore file if one doesn't exist.
             with open(values.TEMPFILE_NAME, 'w') as tf:
-                self.number_of_new_entries = len(new_entries)
+                self.number_of_new_entries = len(self.new_entries)
                 self.new_entries_index = 0
 
                 # Current new entry we want to insert
-                self.new_entry = new_entries[self.new_entries_index] #Entry object
+                self.new_entry = self.new_entries[self.new_entries_index] #Entry object
                 self.new_line = self.new_entry.toStorageString() #storeable formatted string
 
-                # Current stored entry being examined
+                # Current stored entry being compared with
                 self.stored_line = ds.readline() #storeable formatted string
                 self.stored_entry = Entry.lineToEntry(self.stored_line) #Entry object
 
-                def _getNextStoredRecord():
-                    self.stored_line = ds.readline()
-                    if not self.stored_line or self.stored_line.isspace():
-                        self.stored_entry = None
-                    else:
-                        self.stored_entry = Entry.lineToEntry(self.stored_line)
-
-                def _getNextNewEntry():
-                    self.new_entries_index += 1
-                    if self.new_entries_index >= self.number_of_new_entries:
-                        self.new_entry = None
-                    else:
-                        self.new_entry = new_entries[self.new_entries_index]
-                        self.new_line = self.new_entry.toStorageString()
-
                 while True:
-                    print(f"new_entry {self.new_entry}\nnew_line {self.new_line}stored_entry {self.stored_entry}\nstored_line {self.stored_line}\n")
                     if self.new_entry is None:
-                        print(1)
                         while self.stored_entry:
                             tf.write(self.stored_line)
                             _getNextStoredRecord()
                         break
                     elif self.stored_entry is None:
-                        print(2)
                         while self.new_entry:
                             tf.write(self.new_line)
                             _getNextNewEntry()
-                            print("next new entry is" + str(self.new_entry))
                         break
                     elif self.new_entry > self.stored_entry:
-                        print(3)
                         tf.write(self.stored_line)
-                        _getNextStoredRecord()
+                        self.getNextStoredRecord()
                     elif self.new_entry == self.stored_entry:
-                        print(4)
                         tf.write(self.new_line)
-                        _getNextStoredRecord()
-                        _getNextNewEntry()
+                        self.getNextStoredRecord()
+                        self.getNextNewEntry()
                     else: # self.new_entry < self.stored_entry
-                        print(5)
                         tf.write(self.new_line)
-                        _getNextNewEntry()
+                        self.getNextNewEntry()
 
                 os.rename(values.TEMPFILE_NAME, values.DATASTORE_NAME)
                 print(f"\"{self.file_name}\" successfully imported.")
+
+
+    def getNextStoredRecord(self):
+        self.stored_line = ds.readline()
+        if not self.stored_line or self.stored_line.isspace():
+            self.stored_entry = None
+        else:
+            self.stored_entry = Entry.lineToEntry(self.stored_line)
+
+
+    def getNextNewEntry(self):
+        self.new_entries_index += 1
+        if self.new_entries_index >= self.number_of_new_entries:
+            self.new_entry = None
+        else:
+            self.new_entry = self.new_entries[self.new_entries_index]
+            self.new_line = self.new_entry.toStorageString()
