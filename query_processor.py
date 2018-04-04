@@ -71,8 +71,7 @@ class QueryProcessor:
         Inserts into query_dict if there is a valid key and value.'''
         if value_stringbuilder == '':
             return
-        if key in query_dict:
-            raise SyntaxError(f'Duplicate flag {key} in query.')
+        QueryProcessor.raiseErrorIfDuplicate(key, 'query', query_dict)
         query_dict[key] = value_stringbuilder[:-1] #extra space
        
 
@@ -220,7 +219,7 @@ class QueryProcessor:
         Convenience function.
         '''
         if key not in values.VALID_KEYS:
-            raise SyntaxError(f"{key} is an invalid key for {level}.")
+            raise SyntaxError(f"\"{key}\" is an invalid key for {level}.")
 
 
     @staticmethod
@@ -230,7 +229,7 @@ class QueryProcessor:
         Convenience function.
         '''
         if key in dictionary:
-            raise SyntaxError(f"{key} can only be specified once in {level}.")
+            raise SyntaxError(f"\"{key}\" can only be specified once in {level}.")
 
 
     @staticmethod
@@ -240,7 +239,7 @@ class QueryProcessor:
         Convenience function.
         '''
         if key not in values.VALID_AGGREGATE_OPTIONS:
-            raise SyntaxError(f"{key} is an invalid aggregation option for {level}.")
+            raise SyntaxError(f"\"{key}\" is an invalid aggregation option for {level}.")
 
 
     def processQuery(self):

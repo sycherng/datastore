@@ -25,8 +25,7 @@ class SortableRow:
             if a.attributes_dict[key] > b.attributes_dict[key]:
                 return 1
 
-        for key in order_keys:
-            if a.attributes_dict[key] != b.attributes_dict[key]:
+            elif a.attributes_dict[key] < b.attributes_dict[key]:
                 return -1
 
         return 0
