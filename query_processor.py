@@ -22,7 +22,7 @@ class QueryProcessor:
         '''
         variable     | type                          | details
         -------------+-------------------------------+----------------------------------------------------
-        self.filter  | tuple(str, str)               | tuple of (FILTER BY key, value specification)
+        self.filters | dict<str, str>                | dict of <FILTER BY key => value specification>
                      | None                          | None if no -f clause or filter is advanced (includes AND, OR, (, ))
         self.groups  | list<str>                     | list of <GROUP BY keys>
                      | None                          | None if no -g clause 
@@ -31,7 +31,7 @@ class QueryProcessor:
                      | None                          | None if no -o clause
         '''
         if self.filter_is_advanced == False:
-            self.filter = self.parseSimpleFilter()
+            self.filters = self.parseSimpleFilters()
         self.groups = self.parseGroups()
         self.selects = self.parseSelects()
         self.orders = self.parseOrders()
@@ -86,27 +86,67 @@ class QueryProcessor:
                 return True
         return False
 
-
-    def parseSimpleFilter(self):
-        '''(self) -> tuple(str,str)
-        Returns a single tuple of filter key to value restriction if 
+###########start of quarantine
+    def parseSimpleFilters(self):
+        '''(self) -> dict<str,str>
+        Returns a dict of filter keys to filter parameters if 
         a valid -f clause is present.
 
-        Cases handled:
+        Handles single or multiple filter parameters with:
             multiple spaces
             multiple commas
-            multiple equal signs'''
-        if not '-f' in self.parsed_query:
-            return None
-        filter_string = self.parsed_query["-f"]
-        eq_split_strings = filter_string.split("=")
-        key = eq_split_strings[0]
-        QueryProcessor.raiseErrorIfInvalidKey(key, '-f')
-        value = '='.join(eq_split_strings[1:])
-        if value == '':
-            raise SyntaxError(f"-f key {key} lacks specifications.")
-        return (key, value)
+            multiple equal signs
+    
+        Example: -f TITLE=Oh baby,   my love == you,REV=4.00,PROVIDER=your, worst, nightmare
+        '''
+        if '-f' not in self.parsed_query:
+            return
+        filter_string = self.parsed_query['-f']
+        length = len(filter_string)
+        current_index = 0
+        filter_dict = {}
+        while current_index < length:
+            end_index = self.getKeyEndIndex(current_index, filter_string)
+            if not end_index:
+                if current_index == 0:
+                    raise SyntaxError(f"-f clause opened with invalid key {filter_string[:10]}.")
+                current_index = self.readUntilComma(current_index + 1, filter_string, length)
+            else: #found key
+                if current_index != 0: #already have a prev_key
+                    prev_value_end = current_index - 1
+                    prev_value = filter_string[prev_value_current:prev_value_end]
+                    filter_dict[prev_key] = prev_value
+                prev_key = filter_string[current_index:end_index + 1]
+                prev_value_current = end_index + 2 #for '=' then 1 char
+                #raise if invalid key
+                #raise if duplicate key
+                current_index = self.readUntilComma(current_index + 1, filter_string, length)
+        filter_dict[prev_key] = filter_string[prev_value_current:]
+        if filter_dict == {}:
+                pass
+                #raise invalid filter request
+        return filter_dict
 
+    def getKeyEndIndex(self, start, string):
+        current_index = start
+        for char in string[start:]:
+            if current_index - start == 10:
+                return
+            elif char == '=':
+                if string[start:current_index] not in values.VALID_KEYS:
+                    return None
+                else:
+                    return current_index - 1
+            current_index += 1
+
+    def readUntilComma(self, start, string, length):
+        current_index = start
+        for char in string[start:]:
+            if char == ',':
+                return current_index + 1
+            current_index += 1
+        return length
+##################end of quarantine
 
     def parseGroups(self):
         '''(self) -> list<str>
@@ -304,12 +344,12 @@ class QueryProcessor:
     def passedFilter(self, entry): 
         """(self, Entry) -> bool
         Returns boolean representing whether Entry satisfies filter."""
-        if not self.filter: #no filters, automatically passes
+        if not self.filters: #no filters, automatically passes
             return True
-        key, value = self.filter
-        if entry.getAttribute(key) == value:
-            return True
-        return False
+        for key, value in self.filters.items():
+            if entry.getAttribute(key) == value:
+                return True
+            return False
 
 
     def getGroupedEntries(self):
@@ -495,3 +535,4 @@ class QueryProcessor:
         """
         for row in self.selected_rows:
             print(row)
+        print(f"({len(self.selected_rows)} qualifying entries.)")
