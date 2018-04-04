@@ -1,5 +1,5 @@
 import os
-import main, entry
+import values, entry
 
 class Importer:
 
@@ -27,13 +27,13 @@ class Importer:
         """(list of Entry) -> None | binary search insert into datastore, overriding duplicates by primary keys"""
 
         #if tempfile exists, a previous import may have aborted midway, raise an error
-        if os.path.isfile(main.TEMPFILE_NAME):
-            raise RuntimeError(f"Previous file import may have failed. Check {main.DATASTORE_NAME}, delete {main.TEMPFILE_NAME}, and reattempt import as needed.")
+        if os.path.isfile(values.TEMPFILE_NAME):
+            raise RuntimeError(f"Previous file import may have failed. Check {values.DATASTORE_NAME}, delete {values.TEMPFILE_NAME}, and reattempt import as needed.")
 
 
         #otherwise proceed with import
-        with open(main.DATASTORE_NAME, 'w+') as ds:
-            with open(main.TEMPFILE_NAME, 'w') as tf:
+        with open(values.DATASTORE_NAME, 'w+') as ds:
+            with open(values.TEMPFILE_NAME, 'w') as tf:
                 self.number_of_new_entries = len(new_entries)
                 self.new_entries_index = 0
 
@@ -89,5 +89,5 @@ class Importer:
                         tf.write(self.new_line)
                         _getNextNewEntry()
 
-                os.rename(main.TEMPFILE_NAME, main.DATASTORE_NAME)
+                os.rename(values.TEMPFILE_NAME, values.DATASTORE_NAME)
                 print(f"\"{self.file_name}\" successfully imported.")

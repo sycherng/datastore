@@ -1,3 +1,5 @@
+import values
+
 class Entry:
     def __init__(self, fields_dict):
         self.stb = fields_dict["STB"] #pkey
@@ -49,7 +51,7 @@ class Entry:
         return Entry._compare(self, other) != 0
 
     @classmethod
-    def lineToEntry(cls, line, fields=main.DATASTORE_HEADING, delimiter="|"):
+    def lineToEntry(cls, line, fields=values.DATASTORE_HEADING, delimiter="|"):
         """(str, str, str) -> Entry | instantiate an Entry object given a line in a file, fields, and delimiter"""
         if not line or line.isspace(): return None
         line = line[:-1] #remove /n
@@ -72,23 +74,33 @@ class Entry:
             self.view_time)
 
     def getAttribute(self, attribute):
-        if attribute = "STB":
+        if attribute == "STB":
             return self.stb
-        elif attribute = "TITLE":
+        elif attribute == "TITLE":
             return self.title
-        elif attribute = "PROVIDER":
+        elif attribute == "PROVIDER":
             return self.provider
-        elif attribute = "DATE":
+        elif attribute == "DATE":
             return self.date
-        elif attribute = "REV":
+        elif attribute == "REV":
             return self.rev
-        elif attribute = "VIEW_TIME":
+        elif attribute == "VIEW_TIME":
             return self.view_time
         else:
             raise ValueError(f"Entry class has no .{attribute} attribute.")
 
+    def toDict(self):
+        dictionary = {}
+        dictionary['STB'] = self.stb
+        dictionary['TITLE'] = self.title
+        dictionary['PROVIDER'] = self.provider
+        dictionary['DATE'] = self.date
+        dictionary['REV'] = self.rev
+        dictionary['VIEW_TIME'] = self.view_time
+        return dictionary
+
     def getAttributesString(self, attributes_list):
         attributes_string = ''
-        for attribute in attributes_list: #loops over a max of len(main.VALID_HEADINGS), in this case 6 items
-            attributes_string.append(self.getAttribute(attribute)
+        for attribute in attributes_list: #loops over a max of len(values.VALID_HEADINGS), in this case 6 items
+            attributes_string.append(self.getAttribute(attribute))
         return attributes_string
