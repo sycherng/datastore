@@ -65,6 +65,7 @@ class QueryProcessor:
     def parseOrders(self):
         if not '-o' in self.parsed_query_dict:
             return None
+        self.orders_keys = []
         orders = []
         order_string = self.parsed_query_dict['-o']
         comma_split_strings = order_string.split(',')
@@ -76,7 +77,12 @@ class QueryProcessor:
             if len(pair) == 2:
                 value = pair[1]
                 QueryProcessor.raiseErrorIfInvalidAggregate(value, '-o')
+                self.orders_keys.append(f'{key}:{value}')
+            else:
+                self.orders_keys.append(key)
             orders.append((key, value))
+        print('line81 self.orders', orders)
+        print('line82 self.orders_keys', self.orders_keys)
         return orders
 
 
@@ -111,19 +117,6 @@ class QueryProcessor:
         for key in keys:
             QueryProcessor.raiseErrorIfInvalidKey(key, '-g')
         return keys
-
-
-    def parseFlags(self):
-        if ['-f'] in self.parsed_query_dict and filter_is_advanced == False:
-            self.parseSimpleFilter()
-
-        if ['-g'] in self.parsed_query_dict:
-            self.parseGroups()
-
-        self.parseSelects()
-
-        if ['-o'] in self.parsed_query_dict:
-            self.parseOrders()
 
     def parseSimpleFilter(self):
         '''
@@ -236,11 +229,12 @@ class QueryProcessor:
     def orderRows(self):
         if not self.orders:
             return self.processed_rows
+        print('line239 self.orders', self.orders)
         sortable_rows = []
         for row in self.processed_rows:
-            sortable_rows.append(sortable_row.SortableRow(row, self.orders))
+            sortable_rows.append(sortable_row.SortableRow(row, self.orders_keys))
         sortable_rows.sort()
-        ordered_rows = list(map(lambda x: x.rows, sortable_rows))
+        ordered_rows = list(map(lambda x: x.row, sortable_rows))
         return ordered_rows
 
     def entriesToRows(self):
