@@ -28,64 +28,43 @@ class AdvancedFilter:
         expected_tokens = ['(', 'operand']
         last_hit_operator_operand = None
         while current_index < length:
-            print('current index', current_index) #t
-            print('current to end:')#t
-            print(self.filter_string[current_index:]) #t
-            sb = '' #t
-            for i in range(current_index, length-current_index): #t
-                if i > 9:
-                    i = i % 10
-                sb += str(i) #t
-            print(sb) #t
-            print('ln31 expected tokens', expected_tokens)
             end_index = None
             for expected_token in expected_tokens:
                 if expected_token == '(':
                     if self.filter_string[current_index] == expected_token:
-                        print('found a (')
                         open_paren_count += 1
-                        print('-----open_paren_count+1')
                         end_index = current_index
                         last_encountered_token = expected_token
                         break
                 elif expected_token == ')':
                     if self.filter_string[current_index] == expected_token:
-                        print('found a )')
                         open_paren_count -=1
-                        print('-----open_paren_count-1')
                         end_index = current_index
                         last_encountered_token = expected_token
                         break
                 elif expected_token == ' ':
                     if self.filter_string[current_index] == expected_token:
-                        print('found a SPACE')
                         end_index = current_index
                         last_encountered_token = expected_token
                         break
                 elif expected_token == 'operator':
                     end_index = self.getOperatorEndIndex(current_index)
                     if end_index:
-                        print('found an operator')
                         last_hit_operator_operand = 'operator'
                         last_encountered_token = expected_token
                         break
                 elif expected_token == 'operand':
                     end_index = self.getOperandEndIndex(current_index)
                     if end_index:
-                        print(f'ln68 found an operand {self.filter_string[current_index:end_index+1]} end index {end_index}')
                         last_hit_operator_operand = 'operand'
                         last_encountered_token = expected_token
                         break
             if end_index == None:
                 raise SyntaxError(f"Invalid -f parameters at {self.filter_string[current_index:]}")
 
-            print('i passed the check')
             #update what our token is
             token = self.filter_string[current_index:end_index + 1]
 
-            print(f'ln82 last token found |{token}|, expected an {expected_token}, end_index{end_index}')
-
-            print('open paren count', open_paren_count)
             #add token to our tokens list if it's not a space
             if token != ' ':
                 tokens_list.append(token)
@@ -97,7 +76,6 @@ class AdvancedFilter:
             current_index = end_index + 1
 
         #return our max_paren_index and tokens list
-        print('ln93 resulting tokens', tokens_list)
         return tokens_list
 
     @staticmethod
@@ -127,10 +105,8 @@ class AdvancedFilter:
         if last_hit_operator_operand in expected_tokens:
             expected_tokens.remove(last_hit_operator_operand)
 
-        print('new expected_list', expected_tokens)
         return expected_tokens
 
-    #@staticmethod
     def getOperandEndIndex(self, start):
         """(self, int, str) -> int or None
         Starts with the suspected start index of an operand,
@@ -166,10 +142,8 @@ class AdvancedFilter:
         """
         #find VALIDKEY=
         eq_split_string = self.filter_string[start:].split('=')
-        print('ln156 looking for valid key in ', eq_split_string)
         if eq_split_string[0] in values.VALID_KEYS:
             key_end_index = start + self.filter_string[start:].index('=')
-            print('ln158 key end index found at', key_end_index)
         else:
             return None
 
@@ -224,7 +198,6 @@ class AdvancedFilter:
             elif token == 'OR':
                 priority_operator_index = current
             elif token == 'AND':
-                print('ln23 found an AND')
                 priority_operator_index = current
                 break
             current += 1
@@ -317,12 +290,13 @@ def test(ss):
     for e in x.filters_list:
         print(e, index)
     print(pq['-f'])
+    print('\n')
 
-#test("(TITLE=meow meow meow AND REV=4.00)")
-#test("TITLE=unbreakable OR TITLE=zootopia")
-#test("TITLE=despicable me AND REV=4.00 OR REV=3.00")
-#test("TITLE=despicable me AND (TITLE=zootopia OR TITLE=unbreakable)")
-#test("TITLE=despicable me AND REV=4.00 OR REV=3.00 AND DATE=2014-03-01 OR DATE=2014-03-01")
-#test("((TITLE=aaa a a AND REV=bb OR REV=c) AND DATE=dddd) OR DATE=eeeee")
+test("(TITLE=meow meow meow AND REV=4.00)")
+test("TITLE=unbreakable OR TITLE=zootopia")
+test("TITLE=despicable me AND REV=4.00 OR REV=3.00")
+test("TITLE=despicable me AND (TITLE=zootopia OR TITLE=unbreakable)")
+test("TITLE=despicable me AND REV=4.00 OR REV=3.00 AND DATE=2014-03-01 OR DATE=2014-03-01")
+test("((TITLE=aaa a a AND REV=bb OR REV=c) AND DATE=dddd) OR DATE=eeeee")
 test("TITLE=x AND ((REV=y OR REV=zz AND DATE=aa) OR DATE=bb)")
-#test("((TITLE=oh baby, my love == you OR TITLE=sent,from, hell== AND REV=4.00) OR DATE=x)")
+test("((TITLE=oh baby, my love == you OR TITLE=sent,from, hell== AND REV=4.00) OR DATE=x)")
