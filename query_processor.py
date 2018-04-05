@@ -351,6 +351,7 @@ class QueryProcessor:
                 return False
         return True
 
+
     def getSimpleFilteredEntries(self):
         """None or Tuple(String key, String specification)
         (REV, 4.00)

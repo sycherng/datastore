@@ -4,10 +4,9 @@ class AdvancedFilter:
     def __init__(self, parsed_query):
         self.filter_string = parsed_query['-f']
 
-
     def process(self):
         self.initial_tokens = self.tokenizeAdvancedFilter()
-        self.tokens = self.initial_tokens.copy()
+        self.tokens = self.initial_tokens.copy() #for debug purposes, see end of file
         self.filters_list = self.getAdvancedFilter()
         return self.filters_list
 
@@ -80,6 +79,7 @@ class AdvancedFilter:
         #return our max_paren_index and tokens list
         return tokens_list
 
+
     @staticmethod
     def updateExpectedTokens(last_encountered_token, open_paren_count, last_hit_operator_operand):
         #(
@@ -108,6 +108,7 @@ class AdvancedFilter:
             expected_tokens.remove(last_hit_operator_operand)
 
         return expected_tokens
+
 
     def getOperandEndIndex(self, start):
         """(self, int, str) -> int or None
@@ -164,7 +165,7 @@ class AdvancedFilter:
                 return i - 1
         return None
 
-    #@staticmethod
+
     def getOperatorEndIndex(self, start):
         """(self, int, str) -> int or None
         Starts with the suspected start index of an operator,
@@ -177,12 +178,12 @@ class AdvancedFilter:
         else: #no valid operator found
             return None
 
-    ##########above fine, debug start###########
-    #Please insert the completed getAdvancedFilter function here and run all tests below.
+
     def getAdvancedFilter(self):
         filters_list = []
         self.evaluateScope(0, filters_list)
         return filters_list
+
 
     def evaluateScope(self, start, filters_list):
         length = len(self.tokens)
@@ -269,6 +270,7 @@ class AdvancedFilter:
 
             self.evaluateScope(self.getLeftMostOfScope(priority_operator_index), filters_list)
 
+
     def getOperandDict(self, operand):
         if type(operand) == type(0): #operand has type int
             return operand
@@ -276,6 +278,7 @@ class AdvancedFilter:
         key = eq_split_string[0]
         value = operand[operand.index('=')+1:]
         return {key: value}
+
 
     def getLeftMostOfScope(self, start):
         while start != 0 and self.tokens[start] != '(':
