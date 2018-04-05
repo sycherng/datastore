@@ -283,7 +283,7 @@ class AdvancedFilter:
         return start
 
 
-if __name__ == '__main__': #debugging
+if __name__ == '__main__': #test cases
     def test(ss):
         pq = {'-f': ss}
         x = AdvancedFilter(pq)

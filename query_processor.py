@@ -4,8 +4,6 @@ import sortable_row
 import advanced_filter
 
 class QueryProcessor:
-
-
     def __init__(self, query):
         self.query = query
 
