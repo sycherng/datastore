@@ -6,7 +6,8 @@ class AdvancedFilter:
 
 
     def process(self):
-        self.tokens = self.tokenizeAdvancedFilter()
+        self.initial_tokens = self.tokenizeAdvancedFilter()
+        self.tokens = self.initial_tokens.copy()
         self.filters_list = self.getAdvancedFilter()
 
     def tokenizeAdvancedFilter(self):
@@ -272,7 +273,7 @@ class AdvancedFilter:
             return operand
         eq_split_string = operand.split('=')
         key = eq_split_string[0]
-        value = eq_split_string[1]
+        value = operand[operand.index('=')+1:]
         return {key: value}
 
     def getLeftMostOfScope(self, start):
@@ -286,6 +287,7 @@ def test(ss):
     pq = {'-f': ss}
     x = AdvancedFilter(pq)
     x.process()
+    print(x.initial_tokens)
     index = 1
     for e in x.filters_list:
         print(e, index)
