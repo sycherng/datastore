@@ -131,12 +131,14 @@ class QueryProcessor:
         current_index = start
         for char in string[start:]:
             if current_index - start == 10:
-                return
+                return None
             elif char == '=':
                 if string[start:current_index] not in values.VALID_KEYS:
                     return None
                 else:
                     return current_index - 1
+            elif not char.isalpha():
+                    return None
             current_index += 1
 
     def readUntilComma(self, start, string, length):
