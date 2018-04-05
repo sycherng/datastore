@@ -9,6 +9,7 @@ class AdvancedFilter:
         self.initial_tokens = self.tokenizeAdvancedFilter()
         self.tokens = self.initial_tokens.copy()
         self.filters_list = self.getAdvancedFilter()
+        return self.filters_list
 
     def tokenizeAdvancedFilter(self):
         """(self) -> list<str>
@@ -282,23 +283,24 @@ class AdvancedFilter:
         return start
 
 
-##########end debug#########################
-def test(ss):
-    pq = {'-f': ss}
-    x = AdvancedFilter(pq)
-    x.process()
-    print(x.initial_tokens)
-    index = 1
-    for e in x.filters_list:
-        print(e, index)
-    print(pq['-f'])
-    print('\n')
+if __name__ == '__main__': #debugging
+    def test(ss):
+        pq = {'-f': ss}
+        x = AdvancedFilter(pq)
+        x.process()
+        print('tokenized form: ', x.initial_tokens)
+        index = 1
+        print('filters list:')
+        for e in x.filters_list:
+            print(e, index)
+        print('original test string was: ', pq['-f'])
+        print('\n')
 
-test("(TITLE=meow meow meow AND REV=4.00)")
-test("TITLE=unbreakable OR TITLE=zootopia")
-test("TITLE=despicable me AND REV=4.00 OR REV=3.00")
-test("TITLE=despicable me AND (TITLE=zootopia OR TITLE=unbreakable)")
-test("TITLE=despicable me AND REV=4.00 OR REV=3.00 AND DATE=2014-03-01 OR DATE=2014-03-01")
-test("((TITLE=aaa a a AND REV=bb OR REV=c) AND DATE=dddd) OR DATE=eeeee")
-test("TITLE=x AND ((REV=y OR REV=zz AND DATE=aa) OR DATE=bb)")
-test("((TITLE=oh baby, my love == you OR TITLE=sent,from, hell== AND REV=4.00) OR DATE=x)")
+    test("(TITLE=meow meow meow AND REV=4.00)")
+    test("TITLE=unbreakable OR TITLE=zootopia")
+    test("TITLE=despicable me AND REV=4.00 OR REV=3.00")
+    test("TITLE=despicable me AND (TITLE=zootopia OR TITLE=unbreakable)")
+    test("TITLE=despicable me AND REV=4.00 OR REV=3.00 AND DATE=2014-03-01 OR DATE=2014-03-01")
+    test("((TITLE=aaa a a AND REV=bb OR REV=c) AND DATE=dddd) OR DATE=eeeee")
+    test("TITLE=x AND ((REV=y OR REV=zz AND DATE=aa) OR DATE=bb)")
+    test("((TITLE=oh baby, my love == you OR TITLE=sent,from, hell== AND REV=4.00) OR DATE=x)")

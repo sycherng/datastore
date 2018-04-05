@@ -1,6 +1,7 @@
 import values
 import entry
 import sortable_row
+import advanced_filter
 
 class QueryProcessor:
 
@@ -86,7 +87,7 @@ class QueryProcessor:
                 return True
         return False
 
-###########start of quarantine
+
     def parseSimpleFilters(self):
         '''(self) -> dict<str,str>
         Returns a dict of filter keys to filter parameters if 
@@ -148,7 +149,7 @@ class QueryProcessor:
                 return current_index + 1
             current_index += 1
         return length
-##################end of quarantine
+
 
     def parseGroups(self):
         '''(self) -> list<str>
@@ -323,10 +324,34 @@ class QueryProcessor:
 
 
     def getAdvancedFilteredEntries(self):
-        #TODO implement this using expression tree parsing -> getting valid entries from datastore.
-        #Reminder: -s items must be in -g or -s:agg
-        raise NotImplementedError("Advanced filtering not available.")
+        self.adv_filters = advanced_filter.AdvancedFilter(self.parsed_query).process()
+        adv_filtered_entries = []
+        with open(values.DATASTORE_NAME) as datastore:
+            line = datastore.readline()
+            while line:
+                e = entry.Entry.lineToEntry(line)
+                if self.passedAdvancedFilter(e):
+                    adv_filtered_entries.append(e)
+                line = datastore.readline()
+        return adv_filtered_entries
 
+
+    def passedAdvancedFilter(self, entry): 
+        """(self, Entry) -> bool
+        Returns boolean representing whether Entry satisfies filter."""
+        for requirement in self.adv_filters:
+            left_operand, operator, right_operand = requirement
+            if type(left_operand) == type(0): #is an int
+                left_operand = True
+            if type(right_operand) == type(0):
+                right_operand = True
+            if operator == 'AND':
+                expression_result = left_operand and right_operand
+            elif operator == 'OR':
+                expression_result = left_operand or right_operand
+            if not expression_result:
+                return False
+        return True
 
     def getSimpleFilteredEntries(self):
         """None or Tuple(String key, String specification)
