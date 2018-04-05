@@ -5,7 +5,9 @@ class Temp:
         self.parsed_query = {'-f':, filter_string}
 
     def getAdvancedFilters(self):
-        tokenized_advanced_filter = self.tokenizeAdvancedFilter()
+        max_paren_index, tokenized_advanced_filter_string = self.tokenizeAdvancedFilter()
+        filters_dict = self.getAdvancedFilters(tokenized_advanced_filter, max_paren_index)
+        return filters_dict
 
     def tokenizeAdvancedFilter(self):
         """(self) -> list<str>
@@ -23,6 +25,8 @@ class Temp:
         tokens_list = []
         current_index = 0
         open_paren_count = 0
+        max_paren_count = 0
+        max_paren_index = 0
         expected_tokens = ['(', 'operator']
         while current_index < length:
             for expected_token in expected_tokens:
@@ -59,11 +63,16 @@ class Temp:
             tokens_list.append(token)
             #update expected_tokens based on last_encountered_token
             expected_tokens = self.updateExpectedTokens(last_encountered_token, open_paren_count)
-            open_paren_count = self.updateOpenParenCount(last_encountered_token, open_paren_count)
+            prev_max_paren_count = max_paren_count
+            max_paren_count, open_paren_count = self.updateOpenParenCount(last_encountered_token, open_paren_count, max_paren_count)
+            #if max_paren_count was increased, update the index in which max_paren can be found in tokens_list
+            if max_paren_count > prev_max_paren_count:
+                max_paren_index = len(tokens_list) - 1
             #update current_index based on end_index
             current_index = end_index + 1
-        #return our tokens list
-        return tokens_list
+
+        #return our max_paren_index and tokens list
+        return max_paren_index, tokens_list
 
     def updateExpectedTokens(self, last_encountered_token, open_paren_count):
         if last_encountered_token == '(':
@@ -78,13 +87,15 @@ class Temp:
             expected_tokens = ['(', 'operator', 'operand']
         return expected_tokens 
                         
-    def updateOpenParenCount(self, last_encountered_token, open_paren_count):
+    def updateOpenParenCount(self, last_encountered_token, open_paren_count, max_paren_count):
         if last_encountered_token == '(':
             open_paren_count += 1
+            if open_paren_count > max_paren_count:
+                max_paren_count += 1
         elif last_encountered_token == ')':
-            open_paren_count -= 1 
-            
-       
+            open_paren_count -= 1
+       return max_paren_count, open_paren_count
+
     def getOperandEndIndex(self, start, string):
         """(self, int, str) -> int or None
         Starts with the suspected start index of an operand, 
@@ -103,13 +114,16 @@ class Temp:
             return None
 
         current_index = key_end_index + 2
-        while current_index < len(string):
-            if string[current_index] == ')':
+
+        for char in string[current_index:]:
+            current_char = string[current_index]
+            if current_char == ')':
+                return current_index - 1
+            else:
+                end_index = self.getOperatorEndIndex(current_index, string):
                 return current_index - 1
             current_index += 1
-        
-        
-
+        return None
 
     #remove when merging into queryprocessor because is duplicate function
     def getKeyEndIndex(self, start, string):
@@ -128,13 +142,69 @@ class Temp:
     def getOperatorEndIndex(self, start, string):
         """(self, int, str) -> int or None
         Starts with the suspected start index of an operator,
-        reads up to 3 valid characters and checks if it is a valid key,
-        if it is valid, reads until an operand or ( is encountered
-        and returns that -1 as the end index of this operator.
+        reads up to 3 valid characters and checks if it is a valid operator,
+        if it is valid, updates end index,
+        checks if next token encountered is a ( or operand,
+        if so, return end index.
 
         Otherwise returns None."""
+        if string[start:start + 3] == 'AND':
+            end_index = start + 3
+        elif string[start:start + 2] == 'OR':
+            end_index = start + 2
+        else: #no valid operator found
+            return None
+
+        next_char = string[end_index]
+        if next_char = '(':
+            return end_index
+        else:
+            operand_end_index = self.getOperandEndIndex(start, string)
+            if operand_end_index:
+                return end_index
 
 
+    def getAdvancedFilter(self, tokens, max_paren_index):
+        advanced_filters = []
+        left = max_paren_index + 1
+        right = max_paren_index + 1
+        while left > -1 and right < len(tokens + 1):
+            while tokens[left] != '(' or 'AND':
+                left -= 1
+            while tokens[right] != ')' or 'AND':
+                right += 1
+
+            if tokens[left] == '(':
+                left_token = tokens[left + 1]
+            elif tokens[left] == 'AND':
+                middle_token = tokens[left]
+                left_token = tokens[left - 1]
+            if tokens[right] == ')':
+                right_token = tokens[right - 1]
+            elif tokens[right] == 'AND':
+                middle_token = token[right]
+                right_token = tokens[right + 1]
+            if not middle_token:
+                middle_token = tokens[left + 2]
+
+            expression = []
+            expression.append(Temp.getOperand(left_token))
+            expression.append(middle_token)
+            expression.append(Temp.getOperand(right_token)) 
+
+            operand = {}
+            advanced_filters.append(expression)
+            middle_token = None            
+
+        return advanced_filters 
+
+    @staticmethod
+    def getOperand(token):
+        split = token.split('=')
+        key = split[0]
+        value = split[1]
+
+            
 
 
 ############TESTING#############
