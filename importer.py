@@ -11,7 +11,7 @@ class Importer:
         self.file_name = file_name
 
 
-    def importFile(self, file_name):
+    def importFile(self):
         """(self, str) -> None
         Obtains entries from file to be imported, overwriting with newer entry if same logical record,
         sorts the list of entries by primary keys,
@@ -32,9 +32,9 @@ class Importer:
             heading = f.readline()[:-1] #remove /n
             line = f.readline()
             while line:
-                entry = Entry.lineToEntry(line, heading)
-                key = f"{entry.stb}|{entry.title}|{entry.date}" #primary keys
-                new_entries[key] = entry
+                e = entry.Entry.lineToEntry(line, heading)
+                key = f"{e.stb}|{e.title}|{e.date}" #primary keys
+                new_entries[key] = e
                 line = f.readline()
         return list(new_entries.values())
 
@@ -62,18 +62,18 @@ class Importer:
 
                 # Current stored entry being compared with
                 self.stored_line = ds.readline() #storeable formatted string
-                self.stored_entry = Entry.lineToEntry(self.stored_line) #Entry object
+                self.stored_entry = entry.Entry.lineToEntry(self.stored_line, values.DATASTORE_HEADING) #Entry object
 
                 while True:
                     if self.new_entry is None:
                         while self.stored_entry:
                             tf.write(self.stored_line)
-                            _getNextStoredRecord()
+                            self.getNextStoredRecord()
                         break
                     elif self.stored_entry is None:
                         while self.new_entry:
                             tf.write(self.new_line)
-                            _getNextNewEntry()
+                            self.getNextNewEntry()
                         break
                     elif self.new_entry > self.stored_entry:
                         tf.write(self.stored_line)

@@ -69,13 +69,16 @@ class Entry:
 
 
     @classmethod
-    def lineToEntry(cls, line, fields=values.DATASTORE_HEADING, delimiter="|"):
+    def lineToEntry(cls, line, fields, delimiter="|"):
         """(Entry, str, str, str) -> Entry
         Instantiates an Entry object given a line in a file, fields, and delimiter."""
         if not line or line.isspace():
             return
         line = line[:-1] #remove /n
         line_dict = dict(zip(fields.split(delimiter), (value for value in line.split(delimiter))))
+        print('LN',  line)
+        print('FIELDS', fields)
+        print('LNDICT',  line_dict)
         return cls(line_dict)
 
 
